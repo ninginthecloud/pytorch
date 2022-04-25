@@ -294,7 +294,10 @@ class DispatchKeySet final {
                              DispatchKey::Dense,
                              DispatchKey::Quantized,
                              DispatchKey::Sparse,
+                             DispatchKey::SparseCsr,
+                             DispatchKey::NestedTensor,
                              DispatchKey::AutogradFunctionality,
+                             DispatchKey::AutocastFunctionality,
                          })
               .repr_) == 0));
     return static_cast<bool>((repr_ & ks.repr_) != 0);
@@ -560,7 +563,7 @@ class DispatchKeySet final {
         auto next_key = toRuntimePerBackendFunctionalityKey(
             functionality_key,
             static_cast<BackendComponent>(current_backendcomponent_idx_));
-        // We expect all of the Dense, Sparse, Quantized, and Autograd keys to
+        // We expect all of the Dense, Sparse, SparseCsr, Quantized, Autograd and Autocast keys to
         // be ordered the same way with respect to their backends
         TORCH_INTERNAL_ASSERT(
             toBackendComponent(next_key) ==
@@ -627,11 +630,8 @@ constexpr DispatchKeySet autograd_dispatch_keyset = DispatchKeySet({
     DispatchKey::AutogradOther,
 });
 
-constexpr DispatchKeySet autocast_dispatch_keyset = DispatchKeySet({
-    DispatchKey::AutocastCPU,
-    DispatchKey::AutocastCUDA,
-    DispatchKey::AutocastXPU,
-});
+constexpr DispatchKeySet autocast_dispatch_keyset = DispatchKeySet(
+    DispatchKey::AutocastFunctionality);
 
 // See Note [TLS Initialization]
 constexpr DispatchKeySet default_included_set = DispatchKeySet({
@@ -639,11 +639,8 @@ constexpr DispatchKeySet default_included_set = DispatchKeySet({
     DispatchKey::ADInplaceOrView,
 });
 
-constexpr DispatchKeySet default_excluded_set = DispatchKeySet({
-    DispatchKey::AutocastCPU,
-    DispatchKey::AutocastCUDA,
-    DispatchKey::AutocastXPU,
-});
+constexpr DispatchKeySet default_excluded_set = DispatchKeySet(
+    DispatchKey::AutocastFunctionality);
 
 constexpr DispatchKeySet autograd_dispatch_keyset_with_ADInplaceOrView =
     autograd_dispatch_keyset | DispatchKeySet(DispatchKey::ADInplaceOrView);
@@ -655,8 +652,7 @@ constexpr DispatchKeySet python_ks = DispatchKeySet({
 
 constexpr DispatchKeySet sparse_ks = DispatchKeySet(DispatchKey::Sparse);
 
-constexpr DispatchKeySet sparse_csr_ks =
-    DispatchKeySet({DispatchKey::SparseCsrCPU, DispatchKey::SparseCsrCUDA});
+constexpr DispatchKeySet sparse_csr_ks = DispatchKeySet(DispatchKey::SparseCsr);
 
 constexpr DispatchKeySet mkldnn_ks = DispatchKeySet(DispatchKey::MkldnnCPU);
 
@@ -672,13 +668,12 @@ constexpr DispatchKeySet autogradother_backends =
          DispatchKey::ORT,
          DispatchKey::Vulkan,
          DispatchKey::Metal,
-         DispatchKey::SparseCsrCPU,
-         DispatchKey::SparseCsrCUDA,
          DispatchKey::CustomRNGKeyId,
          DispatchKey::MkldnnCPU,
          DispatchKey::Meta,
          // Sparse and Quantized backends also live here.
          DispatchKey::Sparse,
+         DispatchKey::SparseCsr,
          DispatchKey::Quantized})
     // Including the backend bits because this keyset is used during op
     // registration, which requires looping over all runtime autogradother
@@ -807,9 +802,23 @@ inline DispatchKeySet getAutogradRelatedKeySetFromBackend(BackendComponent t) {
 
 // Returns a DispatchKeySet of autocast related keys mapped to backend.
 inline DispatchKeySet getAutocastRelatedKeySetFromBackend(BackendComponent t) {
+
+  constexpr auto autograd_cpu_ks_ = DispatchKeySet(DispatchKey::AutogradCPU);
+  constexpr auto autograd_cuda_ks_ = DispatchKeySet(DispatchKey::AutogradCUDA);
+  constexpr auto autograd_hip_ks_ = DispatchKeySet(DispatchKey::AutogradHIP);
+  constexpr auto autograd_xla_ks_ = DispatchKeySet(DispatchKey::AutogradXLA);
+  constexpr auto autograd_mlc_ks_ = DispatchKeySet(DispatchKey::AutogradMLC);
+  constexpr auto autograd_ipu_ks_ = DispatchKeySet(DispatchKey::AutogradIPU);
+  constexpr auto autograd_xpu_ks_ = DispatchKeySet(DispatchKey::AutogradXPU);
+
   constexpr auto autocast_cpu_ks = DispatchKeySet(DispatchKey::AutocastCPU);
-  constexpr auto autocast_xpu_ks = DispatchKeySet(DispatchKey::AutocastXPU);
   constexpr auto autocast_cuda_ks = DispatchKeySet(DispatchKey::AutocastCUDA);
+  constexpr auto autocast_hip_ks = DispatchKeySet(DispatchKey::AutocastHIP);
+  constexpr auto autocast_xla_ks = DispatchKeySet(DispatchKey::AutocastXLA);
+  constexpr auto autocast_mlc_ks = DispatchKeySet(DispatchKey::AutocastMLC);
+  constexpr auto autocast_ipu_ks = DispatchKeySet(DispatchKey::AutocastIPU);
+  constexpr auto autocast_xpu_ks = DispatchKeySet(DispatchKey::AutocastXPU);
+
   switch (t) {
     case BackendComponent::CPUBit:
       return autocast_cpu_ks;
