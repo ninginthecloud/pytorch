@@ -203,7 +203,12 @@ class TORCH_API ProcessGroup : public torch::CustomClassHolder {
   }
 
   // Subclasses must override this method to return the backend name
-  virtual const std::string getBackendName() const = 0;
+  virtual const std::string getBackendName() const {
+    TORCH_CHECK(
+        false,
+        c10::str(
+            "ProcessGroup ", getBackendName(), "does not support getBackendName"));
+  };
 
   virtual c10::intrusive_ptr<ProcessGroup::Work> broadcast(
       std::vector<at::Tensor>& /* tensors */,
