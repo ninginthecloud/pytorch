@@ -18,6 +18,7 @@
 #include <torch/csrc/jit/passes/canonicalize.h>
 #include <torch/csrc/jit/passes/common_subexpression_elimination.h>
 #include <torch/csrc/jit/passes/constant_propagation.h>
+#include <torch/csrc/jit/passes/cuda_graph_fuser.h>
 #include <torch/csrc/jit/passes/create_autodiff_subgraphs.h>
 #include <torch/csrc/jit/passes/dead_code_elimination.h>
 #include <torch/csrc/jit/passes/graph_fuser.h>
@@ -54,7 +55,18 @@
 namespace torch {
 namespace jit {
 
-TEST(FuserTest, TestSimple_CUDA) {
+class FuserTest : public ::testing::Test {
+  void SetUp() override {
+    old_nvfuser_value_ = RegisterCudaFuseGraph::registerPass(false);
+  }
+  void TearDown() override {
+    RegisterCudaFuseGraph(old_nvfuser_value_);
+  }
+ private:
+  bool old_nvfuser_value_;
+}
+
+TEST_F(FuserTest, TestSimple_CUDA) {
 #if defined(FBCODE_CAFFE2)
   return;
 #endif
@@ -77,7 +89,7 @@ TEST(FuserTest, TestSimple_CUDA) {
   ASSERT_EQ(max_diff, 0);
 }
 
-TEST(FuserTest, TestOne_CUDA) {
+TEST_F(FuserTest, TestOne_CUDA) {
 #if defined(FBCODE_CAFFE2)
   return;
 #endif
@@ -137,7 +149,7 @@ TEST(FuserTest, TestOne_CUDA) {
   testOne(0, 2);
 }
 
-TEST(FuserTest, FusedConcat_CUDA) {
+TEST_F(FuserTest, FusedConcat_CUDA) {
 #if defined(FBCODE_CAFFE2)
   return;
 #endif
