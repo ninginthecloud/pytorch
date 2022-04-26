@@ -283,6 +283,8 @@ Tensor internal_new_from_data(
     // what the extensibility mechanism for this function (internal_new_from_data)
     // looks like for mode-based dispatch keys and C++ tensor extensions.
     c10::impl::ExcludeDispatchKeyGuard functorch_guard(c10::DispatchKey::FuncTorchDynamicLayerBackMode);
+    // And functionalization does the same thing
+    c10::impl::ExcludeDispatchKeyGuard functionalize_guard(c10::DispatchKey::Functionalize);
 
     if (isStorage(data)) {
       ScalarType storage_scalar_type;
